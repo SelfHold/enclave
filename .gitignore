@@ -1,0 +1,20 @@
+# Upstream Chromium checkout and depot_tools (./bezel.py fetch). Never commit it.
+/chromium/
+# Finished builds (make build-*).
+/builds/
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs and local configuration
+*.log
+/logs/
+.env
+.env.*
+.vscode/
+.idea/
+
+# Local assistant notes, not part of the public repo
+CLAUDE.md
+.claude/

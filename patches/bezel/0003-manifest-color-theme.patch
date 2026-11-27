@@ -1,0 +1,20 @@
+diff --git a/chrome/browser/ui/color/chrome_color_mixers.cc b/chrome/browser/ui/color/chrome_color_mixers.cc
+index 8432f49468346..c2b2887b7c0b1 100644
+--- a/chrome/browser/ui/color/chrome_color_mixers.cc
++++ b/chrome/browser/ui/color/chrome_color_mixers.cc
+@@ -10,6 +10,7 @@
+ #include "base/containers/fixed_flat_map.h"
+ #include "base/functional/bind.h"
+ #include "base/no_destructor.h"
++#include "chrome/browser/ui/color/bezel_color_mixer.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
+ #include "chrome/browser/ui/color/chrome_color_mixer.h"
+ #include "chrome/browser/ui/color/chrome_color_provider_utils.h"
+@@ -87,6 +88,7 @@ void AddChromeColorMixers(ui::ColorProvider* provider,
+ 
+   // Must be the last one in order to override other mixer colors.
+   AddNativeChromeColorMixer(provider, key);
++  bezel::AddColorMixer(provider);
+ 
+   if (key.custom_theme) {
+     key.custom_theme->AddColorMixers(provider, key);

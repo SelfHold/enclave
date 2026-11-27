@@ -1,0 +1,165 @@
+diff --git a/components/sync/engine/BUILD.gn b/components/sync/engine/BUILD.gn
+index 4c36091860488..b5623260d12e0 100644
+--- a/components/sync/engine/BUILD.gn
++++ b/components/sync/engine/BUILD.gn
+@@ -178,6 +178,7 @@ static_library("engine") {
+   ]
+ 
+   deps = [
++    "//components/bezel_cloudsync:loopback_bridge",
+     "//base:i18n",
+     "//build:branding_buildflags",
+     "//components/autofill/core/browser:payments_sync_utils",
+diff --git a/components/sync/engine/loopback_server/loopback_server.cc b/components/sync/engine/loopback_server/loopback_server.cc
+index 631abd99c73e4..e12cadfc12dac 100644
+--- a/components/sync/engine/loopback_server/loopback_server.cc
++++ b/components/sync/engine/loopback_server/loopback_server.cc
+@@ -276,9 +276,12 @@ LoopbackServer::LoopbackServer(
+               kHistogramSuffix) {
+   DCHECK(!persistent_file_.empty());
+   Init();
++  bezel::cloudsync::LoopbackBridge::Get().RegisterReplica(
++      persistent_file_, bezel_weak_factory_.GetWeakPtr());
+ }
+ 
+ LoopbackServer::~LoopbackServer() {
++  bezel::cloudsync::LoopbackBridge::Get().UnregisterReplica(persistent_file_);
+   FlushToDisk();
+ }
+ 
+@@ -759,6 +762,7 @@ bool LoopbackServer::HandleCommitRequest(
+   std::map<string, string> client_to_server_ids;
+   string guid = commit.cache_guid();
+   DataTypeSet committed_data_types;
++  std::vector<string> bezel_committed_ids;
+ 
+   // TODO(pvalenzuela): Add validation of CommitMessage.entries.
+   for (const sync_pb::SyncEntity& client_entity : commit.entries()) {
+@@ -792,6 +796,7 @@ bool LoopbackServer::HandleCommitRequest(
+     EntityMap::const_iterator iter = entities_.find(entity_id);
+     CHECK(iter != entities_.end());
+     committed_data_types.Put(iter->second->GetDataType());
++    bezel_committed_ids.push_back(entity_id);
+ 
+     if (observer_for_tests_) {
+       if (client_entity.deleted() && client_entity.has_deletion_origin()) {
+@@ -805,6 +810,17 @@ bool LoopbackServer::HandleCommitRequest(
+     observer_for_tests_->OnCommit(committed_data_types);
+   }
+ 
++  // Bezel: hand what the client committed to the CloudSync replicator.
++  Entities committed;
++  for (const string& id : bezel_committed_ids) {
++    EntityMap::const_iterator iter = entities_.find(id);
++    if (iter != entities_.end()) {
++      iter->second->SerializeAsLoopbackServerEntity(&committed.emplace_back());
++    }
++  }
++  bezel::cloudsync::LoopbackBridge::Get().NotifyLocalCommit(
++      persistent_file_, std::move(committed));
++
+   return throttled_datatypes_in_request->empty();
+ }
+ 
+@@ -817,6 +833,54 @@ void LoopbackServer::ClearServerData() {
+   Init();
+ }
+ 
++LoopbackServer::Entities LoopbackServer::ExportEntities() {
++  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++  Entities result;
++  result.reserve(entities_.size());
++  for (const auto& [id, entity] : entities_) {
++    entity->SerializeAsLoopbackServerEntity(&result.emplace_back());
++  }
++  return result;
++}
++
++std::vector<int> LoopbackServer::ImportEntities(Entities entities) {
++  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++  DataTypeSet changed;
++  for (const sync_pb::LoopbackServerEntity& proto : entities) {
++    std::unique_ptr<LoopbackServerEntity> entity =
++        LoopbackServerEntity::CreateEntityFromProto(proto);
++    if (!entity || entity->GetId() != proto.entity().id_string() ||
++        !IsRealDataType(entity->GetDataType())) {
++      continue;
++    }
++    // A new version makes the client fetch it at its next GetUpdates.
++    UpdateEntityVersion(entity.get());
++    changed.Put(entity->GetDataType());
++    entities_[entity->GetId()] = std::move(entity);
++  }
++  if (!changed.empty()) {
++    ScheduleSaveStateToFile();
++  }
++  std::vector<int> field_numbers;
++  for (DataType type : changed) {
++    field_numbers.push_back(GetSpecificsFieldNumberFromDataType(type));
++  }
++  return field_numbers;
++}
++
++void LoopbackServer::ResetWithKeystoreKey(std::vector<uint8_t> keystore_key) {
++  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++  ClearServerData();
++  keystore_keys_.clear();
++  keystore_keys_.push_back(std::move(keystore_key));
++  ScheduleSaveStateToFile();
++}
++
++std::vector<std::vector<uint8_t>> LoopbackServer::GetKeystoreKeys() {
++  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++  return keystore_keys_;
++}
++
+ void LoopbackServer::DeleteAllEntitiesForDataType(DataType data_type) {
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+   std::erase_if(entities_, [data_type](const auto& id_and_entity) {
+diff --git a/components/sync/engine/loopback_server/loopback_server.h b/components/sync/engine/loopback_server/loopback_server.h
+index 132b8da0d5dea..041b17a45d2b6 100644
+--- a/components/sync/engine/loopback_server/loopback_server.h
++++ b/components/sync/engine/loopback_server/loopback_server.h
+@@ -19,6 +19,8 @@
+ #include "base/memory/raw_ptr.h"
+ #include "base/sequence_checker.h"
+ #include "base/values.h"
++#include "base/memory/weak_ptr.h"
++#include "components/bezel_cloudsync/loopback_bridge.h"
+ #include "components/sync/base/data_type.h"
+ #include "components/sync/engine/loopback_server/loopback_server_entity.h"
+ #include "components/sync/protocol/sync.pb.h"
+@@ -38,7 +40,10 @@ class FakeServer;
+ namespace syncer {
+ 
+ // A loopback version of the Sync server used for local profile serialization.
+-class LoopbackServer : public base::ImportantFileWriter::DataSerializer {
++// Bezel: also a LoopbackReplica, replicated through CloudSync
++// (components/bezel_cloudsync/loopback_bridge.h, docs/CLOUDSYNC.md).
++class LoopbackServer : public base::ImportantFileWriter::DataSerializer,
++                       public bezel::cloudsync::LoopbackReplica {
+  public:
+   class ObserverForTests {
+    public:
+@@ -95,6 +100,12 @@ class LoopbackServer : public base::ImportantFileWriter::DataSerializer {
+ 
+   int GetMigrationVersion(DataType type) const;
+ 
++  // bezel::cloudsync::LoopbackReplica:
++  Entities ExportEntities() override;
++  std::vector<int> ImportEntities(Entities entities) override;
++  void ResetWithKeystoreKey(std::vector<uint8_t> keystore_key) override;
++  std::vector<std::vector<uint8_t>> GetKeystoreKeys() override;
++
+   static int GetMigrationVersionFromProgressTokenForTesting(
+       const std::string& token);
+ 
+@@ -300,6 +311,8 @@ class LoopbackServer : public base::ImportantFileWriter::DataSerializer {
+ 
+   // Response type override callback used in tests.
+   ResponseTypeProvider response_type_override_;
++
++  base::WeakPtrFactory<LoopbackServer> bezel_weak_factory_{this};
+ };
+ 
+ }  // namespace syncer

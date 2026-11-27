@@ -1,0 +1,10 @@
+target_os = "android"
+target_cpu = "arm64"
+
+# Turns on the extensions runtime; in Chromium 158 it cannot be enabled alone
+# (WebUI components assert on this flag). Also switches the NTP and settings
+# pages to their WebUI versions.
+is_desktop_android = true
+
+# Google does not publish the AFDO profile for unbranded builds.
+clang_use_default_sample_profile = false

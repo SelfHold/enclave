@@ -1,0 +1,5 @@
+target_os = "linux"
+target_cpu = "x64"
+
+# WebXR off; on Android this arg asserts in test targets.
+enable_vr = false

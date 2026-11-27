@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Enclave app icon. Colours from the design palette: bezel #000000, hm-bg #080c10, hm-accent #00d4ff. -->
+  <defs>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse" x="20" y="20">
+      <path d="M24 0H0V24" fill="none" stroke="#00d4ff" stroke-opacity="0.10" stroke-width="2"/>
+    </pattern>
+    <filter id="glow" x="-1" y="-1" width="3" height="3">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="28" fill="#000000"/>
+  <rect x="20" y="20" width="216" height="216" rx="12" fill="#080c10"/>
+  <rect x="20" y="20" width="216" height="216" rx="12" fill="url(#grid)"/>
+  <g fill="none" stroke="#00d4ff" stroke-width="14" stroke-linecap="square">
+    <path d="M52 92V52H92M164 52H204V92M204 164V204H164M92 204H52V164"/>
+  </g>
+  <circle cx="128" cy="128" r="22" fill="#00d4ff" filter="url(#glow)" opacity="0.8"/>
+  <circle cx="128" cy="128" r="22" fill="#00d4ff"/>
+</svg>

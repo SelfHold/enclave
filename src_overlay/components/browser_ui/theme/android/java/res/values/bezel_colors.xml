@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bezel: Enclave's dark-only design palette for the Android UI. Same values as
+     ui/color/bezel_sys_color_mixer.h. Tints are pre-blended over hm_surface. -->
+<resources>
+    <color name="hm_bg">#080C10</color>
+    <color name="hm_surface">#0D1117</color>
+    <color name="hm_border">#1C2333</color>
+    <color name="hm_accent">#00D4FF</color>
+    <color name="hm_text">#E6EDF3</color>
+    <color name="hm_muted">#8B949E</color>
+    <color name="hm_error">#EF4444</color>
+    <color name="hm_purple_l">#A78BFA</color>
+    <color name="hm_accent_tint">#0C252E</color>
+</resources>

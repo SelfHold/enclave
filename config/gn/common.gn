@@ -1,0 +1,23 @@
+# Release build with the smallest footprint.
+is_official_build = true
+is_debug = false
+is_component_build = false
+symbol_level = 0
+blink_symbol_level = 0
+v8_symbol_level = 0
+chrome_pgo_phase = 0
+treat_warnings_as_errors = false
+
+# Network features that report to or discover third parties.
+enable_reporting = false
+enable_hangout_services_extension = false
+
+# Subsystems we do not use (see docs/AUDIT.md).
+use_on_device_model_service = false
+enable_remoting = false
+
+# Google keys are passed through the environment, never stored in this repo.
+use_official_google_api_keys = false
+
+proprietary_codecs = true
+ffmpeg_branding = "Chrome"

@@ -1,0 +1,12 @@
+{
+  "alternate_error_pages": { "enabled": false },
+  "browser": { "check_default_browser": false },
+  "distribution": {
+    "do_not_create_desktop_shortcut": true,
+    "import_bookmarks": false,
+    "skip_first_run_ui": true
+  },
+  "enable_a_ping": false,
+  "safebrowsing": { "enabled": false, "enhanced": false },
+  "signin": { "allowed_on_next_startup": true }
+}

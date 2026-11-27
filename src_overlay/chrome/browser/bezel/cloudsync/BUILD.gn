@@ -1,0 +1,99 @@
+# Bezel: sync via CloudSync, the browser side (docs/CLOUDSYNC.md).
+
+import("//testing/test.gni")
+
+source_set("cloudsync") {
+  sources = [
+    "bezel_cloudsync_service.cc",
+    "bezel_cloudsync_service.h",
+    "bezel_cloudsync_service_factory.cc",
+    "bezel_cloudsync_service_factory.h",
+    "bezel_password_mirror.cc",
+    "bezel_password_mirror.h",
+  ]
+  public_deps = [
+    "//base",
+    "//chrome/browser/profiles:profile",
+    "//components/bezel_cloudsync",
+    "//components/keyed_service/core",
+  ]
+  deps = [
+    ":password_backend",
+    ":password_conversion",
+    "//chrome/browser:browser_process",
+    "//chrome/browser/password_manager/factories",
+    "//chrome/browser/profiles:profile_manager",
+    "//chrome/browser/profiles:profile_util",
+    "//chrome/browser/sync",
+    "//components/password_manager/core/browser",
+    "//components/password_manager/core/browser/password_store:password_store_interface",
+    "//components/sync/service",
+    "//content/public/browser",
+  ]
+  if (is_android) {
+    deps += [ "//chrome/browser/bezel/cloudsync/android" ]
+  }
+}
+
+# The profile password store's backend on Android: CloudSync's password
+# store itself (no login DB there). Built everywhere so that its tests run on
+# Linux. //chrome/browser/password_manager/factories depends on it (patch
+# 0015), so it must not depend on that target or on the service above.
+source_set("password_backend") {
+  sources = [
+    "bezel_cloudsync_password_backend.cc",
+    "bezel_cloudsync_password_backend.h",
+    "bezel_cloudsync_password_link.cc",
+    "bezel_cloudsync_password_link.h",
+  ]
+  public_deps = [
+    ":password_conversion",
+    "//base",
+    "//components/bezel_cloudsync",
+    "//components/password_manager/core/browser/password_store:password_store_impl",
+    "//components/password_manager/core/browser/password_store:password_store_interface",
+  ]
+  deps = [
+    "//components/affiliations/core/browser:match_type",
+    "//components/sync/model",
+    "//url",
+  ]
+}
+
+# StoredCredential <-> CloudSync Login and the merge rules of the password
+# mirror. No profile, so it is testable on its own.
+source_set("password_conversion") {
+  sources = [
+    "bezel_password_conversion.cc",
+    "bezel_password_conversion.h",
+  ]
+  public_deps = [
+    "//base",
+    "//components/bezel_cloudsync:connector_proto",
+    "//components/password_manager/core/browser/password_store:password_store_interface",
+  ]
+  deps = [
+    "//components/autofill/core/common",
+    "//crypto",
+    "//url",
+  ]
+}
+
+if (!is_android) {
+  test("bezel_password_mirror_unittests") {
+    sources = [
+      "bezel_cloudsync_password_backend_unittest.cc",
+      "bezel_password_mirror_unittest.cc",
+    ]
+    deps = [
+      ":password_backend",
+      ":password_conversion",
+      "//base",
+      "//base/test:run_all_unittests",
+      "//components/autofill/core/common",
+      "//components/password_manager/core/browser:password_form",
+      "//testing/gtest",
+      "//url",
+    ]
+  }
+}

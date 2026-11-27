@@ -1,0 +1,69 @@
+// Copyright 2026 The Enclave Authors. Use of this source code is governed by the
+// GNU General Public License v3 that can be found in the Enclave LICENSE file.
+
+// What the browser keeps in CloudSync records (app id "enclave") and next to the
+// local sync server. See docs/CLOUDSYNC.md, "Records".
+//
+// Only fields are ever added; nothing is renamed or renumbered: devices with
+// different Bezel versions read each other's records.
+
+syntax = "proto2";
+
+option optimize_for = LITE_RUNTIME;
+
+package bezel.cloudsync.records;
+
+import "components/sync/protocol/loopback_server.proto";
+
+// One sync entity as the local server stores it, plus when and where it last
+// changed. `changed_ms` and `device` decide between two versions of one id
+// (last writer wins; ties go to the larger device id).
+message Entry {
+  optional sync_pb.LoopbackServerEntity entity = 1;
+  optional int64 changed_ms = 2;
+  // Cache GUID of the device that made the change.
+  optional string device = 3;
+}
+
+// The value of a "t/...", "h/..." or "s/..." record, gzip-compressed.
+message Shard {
+  optional int32 format = 1;  // 1
+  repeated Entry entries = 2;
+}
+
+// The value of the "meta" record (not compressed).
+message Meta {
+  optional int32 format = 1;  // 1
+  // Shards per type ("t/<type>/<n>", n < shards): key = the type's specifics
+  // field number. A type missing here has one shard.
+  map<int32, int32> shards = 2;
+}
+
+// Local only, next to profile.pb: when each entity changed, so that a change
+// made while CloudSync was unreachable still wins after a restart.
+message IndexEntry {
+  optional string id = 1;
+  optional int64 changed_ms = 2;
+  optional string device = 3;
+}
+
+message ReplicaIndex {
+  repeated IndexEntry entries = 1;
+}
+
+// The value of the "profiles" record (not compressed): the browser profiles
+// that sync into this vault. A profile's records are "p/<id>/..." (the
+// records above, under that prefix). Profiles on different devices with the
+// same name (trimmed, case-insensitive) share a slot.
+message ProfileSlot {
+  optional string id = 1;          // 8 hex digits, never reused.
+  optional string name = 2;
+  optional int64 created_ms = 3;   // The oldest slot is the primary one: it
+                                   // owns logins without a profile tag.
+  optional int64 renamed_ms = 4;   // Last name change (the newest name wins).
+}
+
+message ProfileSlots {
+  optional int32 format = 1;  // 1
+  repeated ProfileSlot slots = 2;
+}

@@ -1,0 +1,16 @@
+bezel/0001-bundle-ublock-origin.patch
+bezel/0002-privacy-startup-defaults.patch
+bezel/0003-manifest-color-theme.patch
+bezel/0004-android-ublock-asset.patch
+bezel/0005-manifest-system-colors.patch
+bezel/0006-android-manifest-theme.patch
+bezel/0007-ukm-null-service.patch
+bezel/0008-cloudsync-unittests-target.patch
+bezel/0009-local-sync-backend.patch
+bezel/0010-cloudsync-replica.patch
+bezel/0011-cloudsync-service.patch
+bezel/0012-cloudsync-webui.patch
+bezel/0013-cloudsync-android.patch
+bezel/0014-no-api-keys-infobar.patch
+bezel/0015-cloudsync-android-passwords.patch
+bezel/0016-enclave-desktop-id.patch

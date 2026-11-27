@@ -1,0 +1,26 @@
+diff --git a/chrome/browser/shell_integration_linux.cc b/chrome/browser/shell_integration_linux.cc
+index 1a0f12ac33f9a..23b86d2492f5e 100644
+--- a/chrome/browser/shell_integration_linux.cc
++++ b/chrome/browser/shell_integration_linux.cc
+@@ -581,7 +581,7 @@ std::string GetIconName() {
+ #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
+   return "google-chrome";
+ #else  // BUILDFLAG(CHROMIUM_BRANDING)
+-  return "chromium-browser";
++  return "enclave";
+ #endif
+ }
+ 
+diff --git a/chrome/common/channel_info_posix.cc b/chrome/common/channel_info_posix.cc
+index f6bcb3cc8e8d6..713888c612903 100644
+--- a/chrome/common/channel_info_posix.cc
++++ b/chrome/common/channel_info_posix.cc
+@@ -148,7 +148,7 @@ std::string GetDesktopName(base::Environment* env) {
+   if (name.has_value() && !name.value().empty()) {
+     return name.value();
+   }
+-  return "chromium-browser.desktop";
++  return "enclave.desktop";
+ #endif
+ }
+ #endif  // BUILDFLAG(IS_LINUX)

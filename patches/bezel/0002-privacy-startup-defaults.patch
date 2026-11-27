@@ -1,0 +1,21 @@
+diff --git a/chrome/app/chrome_main_delegate.cc b/chrome/app/chrome_main_delegate.cc
+index 33a3b3844ad48..404ab895f795f 100644
+--- a/chrome/app/chrome_main_delegate.cc
++++ b/chrome/app/chrome_main_delegate.cc
+@@ -40,6 +40,7 @@
+ #include "base/time/time.h"
+ #include "base/timer/timer.h"
+ #include "build/build_config.h"
++#include "chrome/app/bezel_privacy_defaults.h"
+ #include "chrome/common/buildflags.h"
+ #include "chrome/common/channel_info.h"
+ #include "chrome/common/chrome_constants.h"
+@@ -1192,6 +1193,8 @@ void ChromeMainDelegate::SetupTracing() {
+ }
+ 
+ std::optional<int> ChromeMainDelegate::BasicStartupComplete() {
++  bezel::ApplyPrivacyDefaults(base::CommandLine::ForCurrentProcess());
++
+   crash_reporter::InitializeCrashKeys();
+ 
+ #if BUILDFLAG(IS_CHROMEOS)

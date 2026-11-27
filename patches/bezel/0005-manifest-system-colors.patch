@@ -1,0 +1,33 @@
+diff --git a/ui/color/BUILD.gn b/ui/color/BUILD.gn
+index e5006c5c67aeb..f807e8d3cbf3e 100644
+--- a/ui/color/BUILD.gn
++++ b/ui/color/BUILD.gn
+@@ -158,6 +158,7 @@ if (is_win) {
+ 
+ component("mixers") {
+   sources = [
++    "bezel_sys_color_mixer.h",
+     "color_mixers.cc",
+     "color_mixers.h",
+     "color_provider_manager.cc",
+diff --git a/ui/color/color_mixers.cc b/ui/color/color_mixers.cc
+index 582a733e38453..00a1bfc01d713 100644
+--- a/ui/color/color_mixers.cc
++++ b/ui/color/color_mixers.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "ui/color/color_mixers.h"
+ 
++#include "ui/color/bezel_sys_color_mixer.h"
++
+ #include "ui/base/ui_base_features.h"
+ #include "ui/color/core_default_color_mixer.h"
+ #include "ui/color/css_system_color_mixer.h"
+@@ -28,6 +30,7 @@ void AddColorMixers(ColorProvider* provider, const ColorProviderKey& key) {
+ #if BUILDFLAG(IS_ANDROID)
+   AddSysColorMixerAndroid(provider, key);
+ #endif
++  bezel::AddSysColorOverrides(provider);
+   AddCoreDefaultColorMixer(provider, key);
+   AddNativeCoreColorMixer(provider, key);
+   AddUiColorMixer(provider, key);

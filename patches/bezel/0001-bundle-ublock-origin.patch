@@ -1,0 +1,91 @@
+diff --git a/chrome/browser/extensions/BUILD.gn b/chrome/browser/extensions/BUILD.gn
+index aa70420081ffc..7e6199e4e5945 100644
+--- a/chrome/browser/extensions/BUILD.gn
++++ b/chrome/browser/extensions/BUILD.gn
+@@ -255,6 +255,8 @@ source_set("extensions") {
+     "commands/command_service.h",
+     "component_extensions_allowlist/allowlist.cc",
+     "component_extensions_allowlist/allowlist.h",
++    "bezel_ublock.cc",
++    "bezel_ublock.h",
+     "component_loader.cc",
+     "component_loader.h",
+     "component_loader_factory.cc",
+diff --git a/chrome/browser/extensions/component_loader.cc b/chrome/browser/extensions/component_loader.cc
+index e6feac0151a4f..80130069db728 100644
+--- a/chrome/browser/extensions/component_loader.cc
++++ b/chrome/browser/extensions/component_loader.cc
+@@ -26,6 +26,7 @@
+ #include "build/build_config.h"
+ #include "build/chromeos_buildflags.h"
+ #include "chrome/browser/browser_process.h"
++#include "chrome/browser/extensions/bezel_ublock.h"
+ #include "chrome/browser/extensions/component_extensions_allowlist/allowlist.h"
+ #include "chrome/browser/extensions/component_loader_factory.h"
+ #include "chrome/browser/extensions/component_loader_prefs.h"
+@@ -626,6 +627,37 @@ void ComponentLoader::AddWithNameAndDescription(
+   }
+ }
+ 
++void ComponentLoader::AddBezelUblock() {
++#if BUILDFLAG(IS_ANDROID)
++  std::optional<base::DictValue> manifest =
++      ParseManifest(bezel::UblockManifest());
++  const std::string* version =
++      manifest ? manifest->FindString("version") : nullptr;
++  if (!version) {
++    return;
++  }
++  std::string version_copy = *version;
++  GetExtensionFileTaskRunner()->PostTaskAndReplyWithResult(
++      FROM_HERE,
++      base::BindOnce(&bezel::EnsureUblockExtracted, std::move(version_copy)),
++      base::BindOnce(&ComponentLoader::OnBezelUblockExtracted,
++                     weak_factory_.GetWeakPtr(), std::move(*manifest)));
++#else
++  Add(bezel::UblockManifest(),
++      base::FilePath::FromASCII(bezel::kUblockDirName),
++      /*skip_allowlist=*/true);
++#endif  // BUILDFLAG(IS_ANDROID)
++}
++
++#if BUILDFLAG(IS_ANDROID)
++void ComponentLoader::OnBezelUblockExtracted(base::DictValue manifest,
++                                             const base::FilePath& directory) {
++  if (!directory.empty()) {
++    Add(std::move(manifest), directory, /*skip_allowlist=*/true);
++  }
++}
++#endif  // BUILDFLAG(IS_ANDROID)
++
+ void ComponentLoader::AddWebStoreApp() {
+ #if BUILDFLAG(IS_CHROMEOS)
+   if (!IsNormalSession()) {
+@@ -819,6 +851,9 @@ void ComponentLoader::AddDefaultComponentExtensionsWithBackgroundPages(
+   AddGlicExtension();
+   AddContextualTasksExtension();
+ 
++  // Bezel: uBlock Origin ships inside the browser.
++  AddBezelUblock();
++
+ // http://crbug.com/41070702
+ #if BUILDFLAG(GOOGLE_CHROME_BRANDING) && !BUILDFLAG(IS_CHROMEOS)
+   AddNetworkSpeechSynthesisExtension();
+diff --git a/chrome/browser/extensions/component_loader.h b/chrome/browser/extensions/component_loader.h
+index 448883bbdbaa4..cff0710e8d901 100644
+--- a/chrome/browser/extensions/component_loader.h
++++ b/chrome/browser/extensions/component_loader.h
+@@ -214,6 +214,13 @@ class ComponentLoader : public KeyedService {
+                   const base::FilePath& root_directory,
+                   bool skip_allowlist);
+ 
++  // Bezel: registers the bundled uBlock Origin.
++  void AddBezelUblock();
++#if BUILDFLAG(IS_ANDROID)
++  void OnBezelUblockExtracted(base::DictValue manifest,
++                              const base::FilePath& directory);
++#endif
++
+   // Loads a registered component extension.
+   void Load(const ComponentExtensionInfo& info);
+ 

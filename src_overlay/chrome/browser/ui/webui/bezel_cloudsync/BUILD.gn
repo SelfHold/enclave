@@ -1,0 +1,24 @@
+# Bezel: chrome://cloudsync, "Sync via CloudSync" (docs/CLOUDSYNC.md).
+# The page is served from string constants; no grit, no TS build.
+
+source_set("bezel_cloudsync") {
+  sources = [
+    "bezel_cloudsync_handler.cc",
+    "bezel_cloudsync_handler.h",
+    "bezel_cloudsync_page.cc",
+    "bezel_cloudsync_page.h",
+    "bezel_cloudsync_ui.cc",
+    "bezel_cloudsync_ui.h",
+  ]
+  public_deps = [
+    "//base",
+    "//chrome/common",
+    "//components/bezel_cloudsync",
+    "//content/public/browser",
+    "//content/public/common",
+  ]
+  deps = [
+    "//chrome/browser/bezel/cloudsync",
+    "//chrome/browser/profiles:profile",
+  ]
+}
