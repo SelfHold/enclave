@@ -1,0 +1,24 @@
+# Enclave: chrome://shard, "Sync via Shard" (docs/SHARD.md).
+# The page is served from string constants; no grit, no TS build.
+
+source_set("enclave_shard") {
+  sources = [
+    "enclave_shard_handler.cc",
+    "enclave_shard_handler.h",
+    "enclave_shard_page.cc",
+    "enclave_shard_page.h",
+    "enclave_shard_ui.cc",
+    "enclave_shard_ui.h",
+  ]
+  public_deps = [
+    "//base",
+    "//chrome/common",
+    "//components/enclave_shard",
+    "//content/public/browser",
+    "//content/public/common",
+  ]
+  deps = [
+    "//chrome/browser/enclave/shard",
+    "//chrome/browser/profiles:profile",
+  ]
+}

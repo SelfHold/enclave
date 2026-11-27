@@ -1,0 +1,11 @@
+# Enclave: uBlock Origin packaged into the APK. enclave_ublock.zip is generated
+# by `enclave.py apply` from vendor/ublock.
+
+import("//build/config/android/rules.gni")
+
+android_assets("enclave_ublock_assets") {
+  sources = [ "enclave_ublock.zip" ]
+
+  # Stored uncompressed so that native code can read it as a byte range.
+  disable_compression = true
+}

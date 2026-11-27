@@ -1,7 +1,7 @@
 # Chromium 158 audit: what can go
 
 Checked against 158.0.8127.88. "Done" means it is in `config/gn/common.gn` or
-`src_overlay/chrome/app/bezel_privacy_defaults.h`.
+`src_overlay/chrome/app/enclave_privacy_defaults.h`.
 
 ## Already off in an unbranded build (no action)
 

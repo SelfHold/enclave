@@ -1,4 +1,4 @@
-BEZEL := python3 bezel.py
+ENCLAVE := python3 enclave.py
 OUT   := chromium/src/out
 BIN   := builds
 
@@ -28,30 +28,30 @@ help:
 	@echo "make clean-builds   remove $(BIN)/"
 
 apply:
-	$(BEZEL) apply
+	$(ENCLAVE) apply
 
 # $(1): platform, $(2): file list. Replaces $(BIN)/$(1) so no stale files are left behind.
 define stage
 	rm -rf $(BIN)/$(1)
 	mkdir -p $(BIN)/$(1)
-	cd $(OUT)/Bezel-$(1) && cp -a $$(ls -d $(2) 2>/dev/null) $(CURDIR)/$(BIN)/$(1)/
+	cd $(OUT)/Enclave-$(1) && cp -a $$(ls -d $(2) 2>/dev/null) $(CURDIR)/$(BIN)/$(1)/
 	@echo "-> $(BIN)/$(1)/"
 endef
 
 build-linux: apply
-	$(BEZEL) build linux
+	$(ENCLAVE) build linux
 	$(call stage,linux,$(LINUX_FILES))
-	$(BEZEL) desktop
+	$(ENCLAVE) desktop
 
 build-windows: apply
-	$(BEZEL) build windows
+	$(ENCLAVE) build windows
 	$(call stage,windows,$(WINDOWS_FILES))
 
 build-apk: apply
-	$(BEZEL) build android
+	$(ENCLAVE) build android
 	rm -rf $(BIN)/android
 	mkdir -p $(BIN)/android
-	cp $(OUT)/Bezel-android/apks/*.apk $(BIN)/android/
+	cp $(OUT)/Enclave-android/apks/*.apk $(BIN)/android/
 	@echo "-> $(BIN)/android/"
 
 test:

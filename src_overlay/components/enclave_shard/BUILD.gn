@@ -1,0 +1,113 @@
+# Enclave: client of the Shard Connector API (docs/SHARD.md).
+
+import("//testing/test.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+# proto/connector.proto is a byte-for-byte copy of Shard's contract, so the
+# lite runtime is forced by a generator option instead of an option in the file.
+proto_library("connector_proto") {
+  sources = [ "proto/connector.proto" ]
+  cc_generator_options = "lite=true:"
+}
+
+proto_library("records_proto") {
+  proto_in_dir = "//"
+  sources = [ "proto/enclave_records.proto" ]
+  deps = [ "//components/sync/protocol" ]
+}
+
+# Linked into the sync engine (LoopbackServer), so it must not depend on
+# anything above components/sync/protocol.
+static_library("loopback_bridge") {
+  sources = [
+    "loopback_bridge.cc",
+    "loopback_bridge.h",
+  ]
+  public_deps = [
+    "//base",
+    "//components/sync/protocol",
+  ]
+}
+
+static_library("enclave_shard") {
+  sources = [
+    "connector_address.cc",
+    "connector_address.h",
+    "connector_client.cc",
+    "connector_client.h",
+    "connector_transport.h",
+    "grpc_frame.cc",
+    "grpc_frame.h",
+    "replicator.cc",
+    "replicator.h",
+    "shard_controller.cc",
+    "shard_controller.h",
+    "shared_pairing.cc",
+    "shared_pairing.h",
+    "status.cc",
+    "status.h",
+  ]
+  if (!is_android) {
+    # Desktops talk gRPC over h2c; Android uses the bound service instead.
+    sources += [
+      "cross_thread_transport.cc",
+      "cross_thread_transport.h",
+      "grpc_transport.cc",
+      "grpc_transport.h",
+      "h2c_connection.cc",
+      "h2c_connection.h",
+    ]
+  }
+  public_deps = [
+    ":connector_proto",
+    ":loopback_bridge",
+    ":records_proto",
+    "//base",
+    "//components/sync/base",
+    "//net",
+  ]
+  deps = [
+    "//base:i18n",
+    "//crypto",
+    "//third_party/zlib/google:compression_utils",
+  ]
+}
+
+source_set("test_support") {
+  testonly = true
+  sources = [
+    "fake_record_store.cc",
+    "fake_record_store.h",
+  ]
+  if (is_posix && !is_android) {
+    sources += [
+      "fake_connector_server.cc",
+      "fake_connector_server.h",
+    ]
+  }
+  public_deps = [
+    ":enclave_shard",
+    "//base",
+    "//net",
+  ]
+}
+
+test("enclave_shard_unittests") {
+  sources = [
+    "connector_address_unittest.cc",
+    "grpc_frame_unittest.cc",
+    "replicator_unittest.cc",
+  ]
+  if (is_posix && !is_android) {
+    sources += [ "connector_client_unittest.cc" ]
+  }
+  deps = [
+    ":enclave_shard",
+    ":test_support",
+    "//base/test:run_all_unittests",
+    "//base/test:test_support",
+    "//components/sync/base",
+    "//testing/gtest",
+    "//third_party/zlib/google:compression_utils",
+  ]
+}

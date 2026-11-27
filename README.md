@@ -9,16 +9,14 @@ and a tree of new files.
 Enclave is part of [SelfHold](https://github.com/SelfHold), a set of independent, self-hosted
 apps:
 
-- [Shard](https://github.com/SelfHold/shard) (formerly CloudSync): serverless, encrypted file
+- [Shard](https://github.com/SelfHold/shard): serverless, encrypted file
   sync with a password safe. Its Connector API carries Enclave's sync and passwords.
 - [Parley](https://github.com/SelfHold/parley): one client for chats, mail and calendars.
 - [Postern](https://github.com/SelfHold/postern): SSH terminal and two-panel file manager.
 - [Cellar](https://github.com/SelfHold/cellar): database manager.
 - [Bezel](https://github.com/SelfHold/bezel): a GNOME/GTK theme in the same visual language.
 
-**About the name "Bezel" in this repo.** "Bezel" was Enclave's working name and is still the
-internal prefix here (`bezel.py`, `bezel_*` files, `patches/bezel/`, GN targets, C++ and Java
-symbols). It has nothing to do with the separate Bezel theme repo. Users only see "Enclave".
+Enclave was formerly called Bezel, a working name unrelated to the Bezel theme repo above.
 
 Builds are not distributed: Enclave is built by whoever uses it.
 
@@ -59,8 +57,8 @@ Google's sync servers are not available to this build. Enclave keeps Chromium's 
 engine and replaces only its server: Chromium's local sync backend runs on each device and its
 entities are replicated through Shard's Connector API (Connector app id `enclave`). Bookmarks,
 history, open tabs, settings and the other synced types go to Shard records; passwords go to
-Shard's own password store. Sync is opt-in (chrome://cloudsync) and the browser works without
-Shard. Design, record layout and status: [docs/CLOUDSYNC.md](docs/CLOUDSYNC.md); the API
+Shard's own password store. Sync is opt-in (chrome://shard) and the browser works without
+Shard. Design, record layout and status: [docs/SHARD.md](docs/SHARD.md); the API
 contract: [Shard's Connector guide](https://github.com/SelfHold/shard/blob/main/docs/CONNECTOR.md).
 
 ## Status
@@ -70,7 +68,7 @@ Work in progress, used by its author.
 - Linux: builds and runs. The sync code has unit tests; a two-device run through Shard is
   still to do.
 - Android: the code is written and the first builds are in progress; not run on a device yet.
-- See "Open issues" in [docs/CLOUDSYNC.md](docs/CLOUDSYNC.md).
+- See "Open issues" in [docs/SHARD.md](docs/SHARD.md).
 
 ## Platforms
 
@@ -87,11 +85,11 @@ Work in progress, used by its author.
   [the Android ones](https://chromium.googlesource.com/chromium/src/+/main/docs/android_build_instructions.md)):
   plenty of RAM and CPU time, and Chromium's build dependencies
   (`chromium/src/build/install-build-deps.sh`, with `--android` for Android).
-- **Disk space:** `./bezel.py fetch` refuses to start with less than **50 GB** free and stops
+- **Disk space:** `./enclave.py fetch` refuses to start with less than **50 GB** free and stops
   when free space falls below 15 GB (rerun it to resume). Builds need a lot more on top of
   that.
 - Python 3.10 or newer and git. `depot_tools` is cloned into `chromium/depot_tools` by
-  `fetch` and put on `PATH` by `bezel.py`.
+  `fetch` and put on `PATH` by `enclave.py`.
 - Only to re-render the icons: `rsvg-convert` (librsvg) and ImageMagick 7 (`magick`).
 - Optional: Google API keys for Google sign-in, passed through the environment
   (`GOOGLE_API_KEY`, `GOOGLE_DEFAULT_CLIENT_ID`, `GOOGLE_DEFAULT_CLIENT_SECRET`). They are
@@ -102,52 +100,52 @@ Work in progress, used by its author.
 ```bash
 git clone https://github.com/SelfHold/enclave.git
 cd enclave
-./bezel.py fetch          # Chromium at the pinned tag into chromium/src (50+ GB)
+./enclave.py fetch        # Chromium at the pinned tag into chromium/src (50+ GB)
 make build-linux          # apply + build -> builds/linux/, installs the launcher and icons
 make build-apk            # apply + build -> builds/android/*.apk
 ```
 
-`make build-linux` runs `./bezel.py desktop` at the end, which installs `enclave.desktop` and
+`make build-linux` runs `./enclave.py desktop` at the end, which installs `enclave.desktop` and
 the icons into `~/.local/share` (or `$XDG_DATA_HOME`). The browser is `builds/linux/chrome`.
 
 The steps one by one:
 
 ```bash
-./bezel.py apply                    # overlay + uBlock manifest/zip + patches + rebranding
-./bezel.py configure linux|android  # args.gn from config/gn, then gn gen (out/Bezel-<platform>)
-./bezel.py build linux|android      # autoninja chrome / chrome_public_apk
-./bezel.py desktop                  # Linux launcher + icons
-./bezel.py icons                    # render branding/*.svg into src_overlay/
-./bezel.py vendor [--source DIR]    # re-copy uBlock Origin (see below)
-make test                           # unit tests of bezel.py
+./enclave.py apply                    # overlay + uBlock manifest/zip + patches + rebranding
+./enclave.py configure linux|android  # args.gn from config/gn, then gn gen (out/Enclave-<platform>)
+./enclave.py build linux|android      # autoninja chrome / chrome_public_apk
+./enclave.py desktop                  # Linux launcher + icons
+./enclave.py icons                    # render branding/*.svg into src_overlay/
+./enclave.py vendor [--source DIR]    # re-copy uBlock Origin (see below)
+make test                             # unit tests of enclave.py
 ```
 
 ## Repository layout
 
 | Path | What it is |
 |---|---|
-| `bezel.py` | Build tool: fetch, vendor, apply, export, configure, build, icons, desktop |
+| `enclave.py` | Build tool: fetch, vendor, apply, export, configure, build, icons, desktop |
 | `Makefile` | `build-linux`, `build-apk`, `apply`, `test`, `clean-builds` |
 | `chromium_version.txt` | The pinned Chromium tag |
-| `patches/series`, `patches/bezel/` | Changes to existing Chromium files, in apply order |
+| `patches/series`, `patches/enclave/` | Changes to existing Chromium files, in apply order |
 | `src_overlay/` | New files, copied into the Chromium tree at the same relative paths |
 | `config/gn/` | GN args: `common.gn` plus one file per platform |
 | `config/initial_preferences.json` | First-run defaults (desktop) |
 | `branding/` | Icon sources (SVG); rendered icons are committed under `src_overlay/` |
 | `vendor/ublock/` | uBlock Origin, vendored (third-party, not edited) |
-| `tests/` | Unit tests of `bezel.py` |
+| `tests/` | Unit tests of `enclave.py` |
 | `docs/` | Audit, decisions, sync design |
 | `chromium/`, `builds/` | Upstream checkout and finished builds; git-ignored |
 
 ## How patches work
 
-- `./bezel.py apply` copies `src_overlay/` into `chromium/src`, writes the uBlock manifest and
+- `./enclave.py apply` copies `src_overlay/` into `chromium/src`, writes the uBlock manifest and
   the Android uBlock zip, applies every patch listed in `patches/series` in order and renames
   the product to Enclave in the branded strings (with their translations). It is idempotent: a
   patch that already applies in reverse is skipped, and unchanged overlay files are left alone.
-- `chromium/src` is never the source of truth. After editing files there, `./bezel.py export`
+- `chromium/src` is never the source of truth. After editing files there, `./enclave.py export`
   rewrites every patch from `git diff` of the files that patch already touches.
-- A new patch starts with `git diff -- <files> > patches/bezel/NNNN-name.patch` in
+- A new patch starts with `git diff -- <files> > patches/enclave/NNNN-name.patch` in
   `chromium/src` and a line in `patches/series`.
 - New code goes into `src_overlay/` whenever possible; patches stay small so that moving to a
   new Chromium release is cheap.
@@ -158,7 +156,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the rules for changes.
 
 `vendor/ublock/` holds uBlock Origin 1.74.0, the Manifest V2 build, as installed from the
 Chrome Web Store (its `_metadata` folder dropped and `update_url` removed from the manifest,
-so it never updates from the store). `./bezel.py vendor` refreshes it from an installed copy;
+so it never updates from the store). `./enclave.py vendor` refreshes it from an installed copy;
 the default source is the Chrome profile under `~/.config/google-chrome/Default/Extensions/`,
 and `--source DIR` points it elsewhere. On desktop it ships next to the binary and loads as a
 component extension; on Android it is an asset of the APK.

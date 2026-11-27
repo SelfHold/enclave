@@ -1,0 +1,175 @@
+diff --git a/chrome/android/java/src/org/chromium/chrome/browser/ChromeBaseAppCompatActivity.java b/chrome/android/java/src/org/chromium/chrome/browser/ChromeBaseAppCompatActivity.java
+index dba5a09b9d79d..e5b176d86cc2e 100644
+--- a/chrome/android/java/src/org/chromium/chrome/browser/ChromeBaseAppCompatActivity.java
++++ b/chrome/android/java/src/org/chromium/chrome/browser/ChromeBaseAppCompatActivity.java
+@@ -826,7 +826,8 @@ public class ChromeBaseAppCompatActivity extends AppCompatActivity
+ 
+     /** Returns whether dynamic colors should be applied. */
+     protected boolean shouldApplyDynamicColors() {
+-        return true;
++        // Enclave: the manifest palette replaces Material You colors.
++        return false;
+     }
+ 
+     /**
+diff --git a/chrome/android/java/src/org/chromium/chrome/browser/document/ChromeLauncherActivity.java b/chrome/android/java/src/org/chromium/chrome/browser/document/ChromeLauncherActivity.java
+index 0dbdb1698a2f4..c6a8175b39f6b 100644
+--- a/chrome/android/java/src/org/chromium/chrome/browser/document/ChromeLauncherActivity.java
++++ b/chrome/android/java/src/org/chromium/chrome/browser/document/ChromeLauncherActivity.java
+@@ -17,7 +17,6 @@ import android.text.TextUtils;
+ 
+ import androidx.annotation.IntDef;
+ 
+-import com.google.android.material.color.DynamicColors;
+ 
+ import org.chromium.base.ContextUtils;
+ import org.chromium.base.IntentUtils;
+@@ -79,7 +78,7 @@ public class ChromeLauncherActivity extends Activity {
+     }
+ 
+     private void applyThemeOverlays() {
+-        DynamicColors.applyToActivityIfAvailable(this);
++        // Enclave: no Material You colors.
+     }
+ 
+     /**
+diff --git a/chrome/android/java/src/org/chromium/chrome/browser/media/AutoPictureInPicturePermissionController.java b/chrome/android/java/src/org/chromium/chrome/browser/media/AutoPictureInPicturePermissionController.java
+index d062acb43e98e..4b31687a454de 100644
+--- a/chrome/android/java/src/org/chromium/chrome/browser/media/AutoPictureInPicturePermissionController.java
++++ b/chrome/android/java/src/org/chromium/chrome/browser/media/AutoPictureInPicturePermissionController.java
+@@ -14,7 +14,6 @@ import android.view.ViewParent;
+ 
+ import androidx.annotation.VisibleForTesting;
+ 
+-import com.google.android.material.color.DynamicColors;
+ 
+ import org.jni_zero.JNINamespace;
+ import org.jni_zero.JniType;
+@@ -237,7 +236,6 @@ public class AutoPictureInPicturePermissionController implements NightModeStateP
+         Context themedContext =
+                 NightModeUtils.wrapContextWithNightModeConfig(
+                         activity, R.style.Theme_Chromium_Activity, isNightMode);
+-        themedContext = DynamicColors.wrapContextIfAvailable(themedContext);
+ 
+         mView =
+                 new AutoPipPermissionDialogView(
+diff --git a/chrome/browser/ui/android/night_mode/java/src/org/chromium/chrome/browser/night_mode/NightModeUtils.java b/chrome/browser/ui/android/night_mode/java/src/org/chromium/chrome/browser/night_mode/NightModeUtils.java
+index 9dcc83fe91145..495b95f821156 100644
+--- a/chrome/browser/ui/android/night_mode/java/src/org/chromium/chrome/browser/night_mode/NightModeUtils.java
++++ b/chrome/browser/ui/android/night_mode/java/src/org/chromium/chrome/browser/night_mode/NightModeUtils.java
+@@ -111,12 +111,8 @@ public class NightModeUtils {
+      */
+     @CalledByNative
+     public static @ThemeType int getThemeSetting() {
+-        int userSetting = ChromeSharedPreferences.getInstance().readInt(UI_THEME_SETTING, -1);
+-        if (userSetting == -1) {
+-            return ThemeType.SYSTEM_DEFAULT;
+-        } else {
+-            return userSetting;
+-        }
++        // Enclave: DESIGN_MANIFEST.md is dark only.
++        return ThemeType.DARK;
+     }
+ 
+     /**
+diff --git a/components/browser_ui/theme/android/BUILD.gn b/components/browser_ui/theme/android/BUILD.gn
+index f2a895e141020..2ef847ba5f24d 100644
+--- a/components/browser_ui/theme/android/BUILD.gn
++++ b/components/browser_ui/theme/android/BUILD.gn
+@@ -14,6 +14,7 @@ android_resources("java_resources") {
+     "java/res/values-night/colors.xml",
+     "java/res/values-night/themes.xml",
+     "java/res/values/attrs.xml",
++    "java/res/values/enclave_colors.xml",
+     "java/res/values/colors.xml",
+   ]
+   deps = [
+diff --git a/components/browser_ui/theme/android/templates/res/values/themes.xml b/components/browser_ui/theme/android/templates/res/values/themes.xml
+index 640ec1ed8d924..686b5b82633a2 100644
+--- a/components/browser_ui/theme/android/templates/res/values/themes.xml
++++ b/components/browser_ui/theme/android/templates/res/values/themes.xml
+@@ -223,7 +223,7 @@ Note: This is a jinja2 template, processed at build time into the final resource
+         {% endmacro %}
+         {{ full_window_attributes() }}
+     </style>
+-    <style name="Theme.BrowserUI.DayNight" parent="Theme.BrowserUI.Light" />
++    <style name="Theme.BrowserUI.DayNight" parent="Theme.BrowserUI.Dark" />
+ 
+     <!-- Colors should be mirrored by Theme.BrowserUI -->
+     <style name="Theme.BrowserUI.Light.DialogWhenLarge" parent="Theme.Material3Expressive.Light.DialogWhenLarge">
+@@ -234,7 +234,7 @@ Note: This is a jinja2 template, processed at build time into the final resource
+         {{ misc_attributes() }}
+         {{ adaptive_density_attributes() }}
+     </style>
+-    <style name="Theme.BrowserUI.DayNight.DialogWhenLarge" parent="Theme.BrowserUI.Light.DialogWhenLarge"/>
++    <style name="Theme.BrowserUI.DayNight.DialogWhenLarge" parent="Theme.BrowserUI.Dark.DialogWhenLarge"/>
+ 
+     <!-- Unlike |ThemeOverlay.BrowserUI.AlertDialog|, this is a complete theme that can be used as
+          an activity theme on its own. In addition to mirroring |Theme.BrowserUI|, this should
+@@ -266,38 +266,38 @@ Note: This is a jinja2 template, processed at build time into the final resource
+         {% endmacro %}
+         {{ alert_dialog_attributes() }}
+     </style>
+-    <style name="Theme.BrowserUI.DayNight.AlertDialog.NoActionBar" parent="Theme.BrowserUI.Light.AlertDialog.NoActionBar"/>
++    <style name="Theme.BrowserUI.DayNight.AlertDialog.NoActionBar" parent="Theme.BrowserUI.Dark.AlertDialog.NoActionBar"/>
+ 
+     <!-- Dark themes -->
+     <style name="Theme.BrowserUI.Dark" parent="Theme.Material3Expressive.Dark.NoActionBar">
+         {% macro color_palette_dark_attributes() %}
+-        <!-- Color palettes -->
+-        <item name="colorPrimary">@color/baseline_primary_80</item>
+-        <item name="colorPrimaryInverse">@color/baseline_primary_40</item>
+-        <item name="colorOnPrimary">@color/baseline_primary_20</item>
+-        <item name="colorPrimaryContainer">@color/baseline_primary_30</item>
+-        <item name="colorOnPrimaryContainer">@color/baseline_primary_90</item>
+-        <item name="colorSecondaryContainer">@color/baseline_secondary_30</item>
+-        <item name="colorOnSecondaryContainer">@color/baseline_secondary_90</item>
+-        <item name="android:colorBackground">@color/baseline_neutral_10</item>
+-        <item name="colorOnBackground">@color/baseline_neutral_90</item>
+-        <item name="colorSurface">@color/gm3_baseline_surface_dark</item>
+-        <item name="colorOnSurface">@color/baseline_neutral_90</item>
+-        <item name="colorSurfaceVariant">@color/baseline_neutral_variant_30</item>
+-        <item name="colorOnSurfaceVariant">@color/baseline_neutral_variant_80</item>
+-        <item name="colorSurfaceInverse">@color/baseline_neutral_95</item>
+-        <item name="colorOnSurfaceInverse">@color/baseline_neutral_20</item>
+-        <item name="colorSurfaceBright">@color/gm3_baseline_surface_bright_dark</item>
+-        <item name="colorSurfaceDim">@color/gm3_baseline_surface_dim_dark</item>
+-        <item name="colorSurfaceContainerLow">@color/gm3_baseline_surface_container_low_dark</item>
+-        <item name="colorSurfaceContainer">@color/gm3_baseline_surface_container_dark</item>
+-        <item name="colorSurfaceContainerHigh">@color/gm3_baseline_surface_container_high_dark</item>
+-        <item name="colorSurfaceContainerHighest">@color/gm3_baseline_surface_container_highest_dark</item>
+-        <item name="colorOutline">@color/baseline_neutral_variant_60</item>
+-        <item name="colorOutlineVariant">@color/baseline_neutral_variant_30</item>
+-        <item name="colorTertiaryContainer">@color/baseline_tertiary_30</item>
+-        <item name="colorOnTertiaryContainer">@color/baseline_tertiary_90</item>
+-        <item name="colorError">@color/baseline_error_80</item>
++        <!-- Color palettes: Enclave, DESIGN_MANIFEST.md -->
++        <item name="colorPrimary">@color/hm_accent</item>
++        <item name="colorPrimaryInverse">@color/hm_accent</item>
++        <item name="colorOnPrimary">@color/hm_bg</item>
++        <item name="colorPrimaryContainer">@color/hm_accent_tint</item>
++        <item name="colorOnPrimaryContainer">@color/hm_accent</item>
++        <item name="colorSecondaryContainer">@color/hm_border</item>
++        <item name="colorOnSecondaryContainer">@color/hm_text</item>
++        <item name="android:colorBackground">@color/hm_bg</item>
++        <item name="colorOnBackground">@color/hm_text</item>
++        <item name="colorSurface">@color/hm_bg</item>
++        <item name="colorOnSurface">@color/hm_text</item>
++        <item name="colorSurfaceVariant">@color/hm_surface</item>
++        <item name="colorOnSurfaceVariant">@color/hm_muted</item>
++        <item name="colorSurfaceInverse">@color/hm_text</item>
++        <item name="colorOnSurfaceInverse">@color/hm_bg</item>
++        <item name="colorSurfaceBright">@color/hm_surface</item>
++        <item name="colorSurfaceDim">@color/hm_bg</item>
++        <item name="colorSurfaceContainerLow">@color/hm_surface</item>
++        <item name="colorSurfaceContainer">@color/hm_surface</item>
++        <item name="colorSurfaceContainerHigh">@color/hm_surface</item>
++        <item name="colorSurfaceContainerHighest">@color/hm_surface</item>
++        <item name="colorOutline">@color/hm_border</item>
++        <item name="colorOutlineVariant">@color/hm_border</item>
++        <item name="colorTertiaryContainer">@color/hm_border</item>
++        <item name="colorOnTertiaryContainer">@color/hm_purple_l</item>
++        <item name="colorError">@color/hm_error</item>
+         {% endmacro %}
+         {{ color_palette_dark_attributes() }}
+         {{ other_color_attributes() }}

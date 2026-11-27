@@ -1,0 +1,27 @@
+diff --git a/chrome/browser/segmentation_platform/ukm_database_client.cc b/chrome/browser/segmentation_platform/ukm_database_client.cc
+index b1c1c599c6860..21d717ad217be 100644
+--- a/chrome/browser/segmentation_platform/ukm_database_client.cc
++++ b/chrome/browser/segmentation_platform/ukm_database_client.cc
+@@ -48,8 +48,11 @@ void UkmDatabaseClient::PreProfileInit(bool in_memory_database) {
+     ukm_observer_ = std::make_unique<UkmObserver>(ukm_recorder_for_testing_);
+   } else if (g_browser_process->GetMetricsServicesManager()) {
+     // GetMetricsServicesManager() can be null only in unit tests.
+-    ukm_observer_ = std::make_unique<UkmObserver>(
+-        g_browser_process->GetMetricsServicesManager()->GetUkmService());
++    // Enclave: with the Ukm feature off there is no UkmService to observe.
++    if (auto* ukm_service =
++            g_browser_process->GetMetricsServicesManager()->GetUkmService()) {
++      ukm_observer_ = std::make_unique<UkmObserver>(ukm_service);
++    }
+   } else {
+     CHECK_IS_TEST();
+   }
+@@ -63,7 +66,7 @@ void UkmDatabaseClient::PreProfileInit(bool in_memory_database) {
+       in_memory_database);
+   if (ukm_observer_) {
+     ukm_data_manager_->StartObservation(ukm_observer_.get());
+-  } else {
++  } else if (!g_browser_process->GetMetricsServicesManager()) {
+     CHECK_IS_TEST();
+   }
+ }

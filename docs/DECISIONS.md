@@ -18,16 +18,16 @@
 
 ## uBlock loading
 
-- Desktop: files next to the binary in `resources/bezel_ublock`, loaded as a component
+- Desktop: files next to the binary in `resources/enclave_ublock`, loaded as a component
   extension (no store updates, cannot be removed).
-- Android: one uncompressed `assets/bezel_ublock.zip` in the APK, unpacked once per version
+- Android: one uncompressed `assets/enclave_ublock.zip` in the APK, unpacked once per version
   into app data on the extension file thread. A `.pak` does not work: extension locales are
   read from disk.
 
 ## Theme
 
 - Palette overrides go into the `kColorSys*` tokens right after the ui sys mixers
-  (`ui/color/bezel_sys_color_mixer.h`), so Views and WebUI derive from it. A later mixer
+  (`ui/color/enclave_sys_color_mixer.h`), so Views and WebUI derive from it. A later mixer
   cannot cascade: recipes resolve against the mixers before them.
 - `force-dark-mode` at startup: Enclave's design is dark only. Web pages also see
   `prefers-color-scheme: dark`.
@@ -36,11 +36,11 @@
 
 - Google's sync servers are unavailable to this build. Chromium's local sync backend
   (`LoopbackServer`) runs on each device and its entities are replicated through the
-  Connector API of [Shard](https://github.com/SelfHold/shard) (formerly CloudSync). All
+  Connector API of [Shard](https://github.com/SelfHold/shard). All
   data-type logic and merging stays upstream.
 - Passwords go to Shard's own password store, not to our records, through the
   `passwords` scope Shard added for us ([Connector guide](https://github.com/SelfHold/shard/blob/main/docs/CONNECTOR.md) § 12).
-- Details and order of work: `docs/CLOUDSYNC.md`.
+- Details and order of work: `docs/SHARD.md`.
 
 ## Shard replication details (2026-11-26)
 
@@ -51,7 +51,7 @@
 - Passwords: a mirror between the login DB and Shard's password store instead of our
   own `PasswordStoreBackend`: far less code, and the login DB is the offline cache that Connector
   guide § 12.3 asks for anyway.
-- chrome://cloudsync is a string-served WebUI page, not a settings page in TS/Lit: no grit
+- chrome://shard is a string-served WebUI page, not a settings page in TS/Lit: no grit
   resources, cheap to rebase.
 
 ## App icon (2026-11-26)
@@ -68,16 +68,17 @@
   `.desktop` file whose id equals the window's `app_id`, not from the PNGs in the binary.
   Upstream sends `chromium-browser`, which has no desktop file here, so the dock showed a gear.
   Patch 0016 makes the default id `enclave` (app_id, WM_CLASS, fallback shortcut icon);
-  `./bezel.py desktop` installs `enclave.desktop` and hicolor icons into `~/.local/share`.
+  `./enclave.py desktop` installs `enclave.desktop` and hicolor icons into `~/.local/share`.
   `CHROME_DESKTOP` in `Exec` keeps builds without the patch matching too.
 
 ## Name: Enclave (2026-11-26)
 
 - Users see "Enclave": a browser that keeps to itself and pairs only with its own sync,
-  Shard (formerly CloudSync).
-- "Bezel" stays as the internal prefix (files, GN targets, the `Bezel Sync` profile directory):
-  renaming it only costs rebase work and would move existing profile data.
-- `./bezel.py apply` renames the product (`rebrand()`) instead of carrying a patch: a patch over
+  Shard.
+- The internal prefix is `enclave` too (files, GN targets, C++ and Java symbols, the
+  `Enclave Sync` profile directory). Renamed on 2026-11-27 as a clean break: profile data
+  synced under the old names is not migrated.
+- `./enclave.py apply` renames the product (`rebrand()`) instead of carrying a patch: a patch over
   `chromium_strings.grd`, its `.grdp` and 160+ `.xtb` files would conflict on every rebase.
   A translation id is a hash of the English text, so the step reads the old and new ids from grit
   and moves every translation to its new id. The share of untranslated strings stays as upstream.

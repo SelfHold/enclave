@@ -11,7 +11,7 @@ soon as possible; a fix and an advisory follow once the issue is confirmed.
 
 ## Scope
 
-In scope: Enclave's own code and changes, that is, `bezel.py`, `patches/`, `src_overlay/`
+In scope: Enclave's own code and changes, that is, `enclave.py`, `patches/`, `src_overlay/`
 (in particular the sync code that talks to Shard's Connector API and handles the pairing token
 and passwords) and the build configuration in `config/`.
 

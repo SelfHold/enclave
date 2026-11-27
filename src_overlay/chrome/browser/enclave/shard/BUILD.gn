@@ -1,0 +1,99 @@
+# Enclave: sync via Shard, the browser side (docs/SHARD.md).
+
+import("//testing/test.gni")
+
+source_set("shard") {
+  sources = [
+    "enclave_password_mirror.cc",
+    "enclave_password_mirror.h",
+    "enclave_shard_service.cc",
+    "enclave_shard_service.h",
+    "enclave_shard_service_factory.cc",
+    "enclave_shard_service_factory.h",
+  ]
+  public_deps = [
+    "//base",
+    "//chrome/browser/profiles:profile",
+    "//components/enclave_shard",
+    "//components/keyed_service/core",
+  ]
+  deps = [
+    ":password_backend",
+    ":password_conversion",
+    "//chrome/browser:browser_process",
+    "//chrome/browser/password_manager/factories",
+    "//chrome/browser/profiles:profile_manager",
+    "//chrome/browser/profiles:profile_util",
+    "//chrome/browser/sync",
+    "//components/password_manager/core/browser",
+    "//components/password_manager/core/browser/password_store:password_store_interface",
+    "//components/sync/service",
+    "//content/public/browser",
+  ]
+  if (is_android) {
+    deps += [ "//chrome/browser/enclave/shard/android" ]
+  }
+}
+
+# The profile password store's backend on Android: Shard's password
+# store itself (no login DB there). Built everywhere so that its tests run on
+# Linux. //chrome/browser/password_manager/factories depends on it (patch
+# 0015), so it must not depend on that target or on the service above.
+source_set("password_backend") {
+  sources = [
+    "enclave_shard_password_backend.cc",
+    "enclave_shard_password_backend.h",
+    "enclave_shard_password_link.cc",
+    "enclave_shard_password_link.h",
+  ]
+  public_deps = [
+    ":password_conversion",
+    "//base",
+    "//components/enclave_shard",
+    "//components/password_manager/core/browser/password_store:password_store_impl",
+    "//components/password_manager/core/browser/password_store:password_store_interface",
+  ]
+  deps = [
+    "//components/affiliations/core/browser:match_type",
+    "//components/sync/model",
+    "//url",
+  ]
+}
+
+# StoredCredential <-> Shard Login and the merge rules of the password
+# mirror. No profile, so it is testable on its own.
+source_set("password_conversion") {
+  sources = [
+    "enclave_password_conversion.cc",
+    "enclave_password_conversion.h",
+  ]
+  public_deps = [
+    "//base",
+    "//components/enclave_shard:connector_proto",
+    "//components/password_manager/core/browser/password_store:password_store_interface",
+  ]
+  deps = [
+    "//components/autofill/core/common",
+    "//crypto",
+    "//url",
+  ]
+}
+
+if (!is_android) {
+  test("enclave_password_mirror_unittests") {
+    sources = [
+      "enclave_password_mirror_unittest.cc",
+      "enclave_shard_password_backend_unittest.cc",
+    ]
+    deps = [
+      ":password_backend",
+      ":password_conversion",
+      "//base",
+      "//base/test:run_all_unittests",
+      "//components/autofill/core/common",
+      "//components/password_manager/core/browser:password_form",
+      "//testing/gtest",
+      "//url",
+    ]
+  }
+}

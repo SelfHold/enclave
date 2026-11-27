@@ -1,4 +1,4 @@
-# Upstream Chromium checkout and depot_tools (./bezel.py fetch). Never commit it.
+# Upstream Chromium checkout and depot_tools (./enclave.py fetch). Never commit it.
 /chromium/
 # Finished builds (make build-*).
 /builds/

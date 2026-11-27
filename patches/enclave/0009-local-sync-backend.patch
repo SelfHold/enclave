@@ -1,0 +1,151 @@
+diff --git a/chrome/browser/sync/chrome_sync_client.cc b/chrome/browser/sync/chrome_sync_client.cc
+index bc219a9d1154d..caf4818391190 100644
+--- a/chrome/browser/sync/chrome_sync_client.cc
++++ b/chrome/browser/sync/chrome_sync_client.cc
+@@ -38,10 +38,8 @@ namespace {
+ 
+ using content::BrowserThread;
+ 
+-#if BUILDFLAG(IS_WIN)
+ constexpr base::FilePath::CharType kLoopbackServerBackendFilename[] =
+     FILE_PATH_LITERAL("profile.pb");
+-#endif  // BUILDFLAG(IS_WIN)
+ 
+ // A global variable is needed to detect multi-profile scenarios where more than
+ // one profile try to register a synthetic field trial. Rather than using a
+@@ -119,6 +117,18 @@ base::FilePath ChromeSyncClient::GetLocalSyncBackendFolder() {
+         GetPrefService()->GetFilePath(syncer::prefs::kLocalSyncBackendDir);
+   }
+ 
++  // Enclave: <profile>/Enclave Sync/profile.pb on every platform, replicated
++  // through Shard (EnclaveShardService::BackendFileFor).
++  if (local_sync_backend_folder.empty()) {
++    base::FilePath user_data_dir;
++    if (!base::PathService::Get(chrome::DIR_USER_DATA, &user_data_dir)) {
++      return base::FilePath();
++    }
++    return user_data_dir.Append(profile_base_name_)
++        .Append(FILE_PATH_LITERAL("Enclave Sync"))
++        .Append(kLoopbackServerBackendFilename);
++  }
++
+ #if BUILDFLAG(IS_WIN)
+   if (local_sync_backend_folder.empty()) {
+     if (!base::PathService::Get(chrome::DIR_ROAMING_USER_DATA,
+diff --git a/components/sync/base/data_type.cc b/components/sync/base/data_type.cc
+index 23a494f2739e7..f9247cc57308e 100644
+--- a/components/sync/base/data_type.cc
++++ b/components/sync/base/data_type.cc
+@@ -145,7 +145,7 @@ constexpr std::array<DataTypeInfo, syncer::GetNumDataTypes()>
+             .unsynced_data_check_on_signout_policy =
+                 UnsyncedDataCheckOnSignoutPolicy::kRequired,
+             .cross_user_sharing_policy = CrossUserSharingPolicy::kNone,
+-            .local_sync_support_policy = LocalSyncSupportPolicy::kSupported,
++            .local_sync_support_policy = LocalSyncSupportPolicy::kUnsupported,
+         },
+         {
+             .type = AUTOFILL_PROFILE,
+@@ -386,7 +386,7 @@ constexpr std::array<DataTypeInfo, syncer::GetNumDataTypes()>
+             .unsynced_data_check_on_signout_policy =
+                 UnsyncedDataCheckOnSignoutPolicy::kNone,
+             .cross_user_sharing_policy = CrossUserSharingPolicy::kNone,
+-            .local_sync_support_policy = LocalSyncSupportPolicy::kUnsupported,
++            .local_sync_support_policy = LocalSyncSupportPolicy::kSupported,
+         },
+         {
+             .type = DICTIONARY,
+@@ -712,7 +712,7 @@ constexpr std::array<DataTypeInfo, syncer::GetNumDataTypes()>
+             .unsynced_data_check_on_signout_policy =
+                 UnsyncedDataCheckOnSignoutPolicy::kNone,
+             .cross_user_sharing_policy = CrossUserSharingPolicy::kNone,
+-            .local_sync_support_policy = LocalSyncSupportPolicy::kUnsupported,
++            .local_sync_support_policy = LocalSyncSupportPolicy::kSupported,
+         },
+         {
+             .type = PRINTERS_AUTHORIZATION_SERVERS,
+@@ -746,7 +746,7 @@ constexpr std::array<DataTypeInfo, syncer::GetNumDataTypes()>
+             .unsynced_data_check_on_signout_policy =
+                 UnsyncedDataCheckOnSignoutPolicy::kRequired,
+             .cross_user_sharing_policy = CrossUserSharingPolicy::kNone,
+-            .local_sync_support_policy = LocalSyncSupportPolicy::kUnsupported,
++            .local_sync_support_policy = LocalSyncSupportPolicy::kSupported,
+         },
+         {
+             .type = SAVED_TAB_GROUP,
+@@ -780,7 +780,7 @@ constexpr std::array<DataTypeInfo, syncer::GetNumDataTypes()>
+             .unsynced_data_check_on_signout_policy =
+                 UnsyncedDataCheckOnSignoutPolicy::kNone,
+             .cross_user_sharing_policy = CrossUserSharingPolicy::kNone,
+-            .local_sync_support_policy = LocalSyncSupportPolicy::kSupported,
++            .local_sync_support_policy = LocalSyncSupportPolicy::kUnsupported,
+         },
+         {
+             .type = INCOMING_PASSWORD_SHARING_INVITATION,
+diff --git a/components/sync/base/data_type_unittest.cc b/components/sync/base/data_type_unittest.cc
+index 109beb632571f..a19047b546e22 100644
+--- a/components/sync/base/data_type_unittest.cc
++++ b/components/sync/base/data_type_unittest.cc
+@@ -158,11 +158,12 @@ TEST(DataTypeTest, DataTypeSetFromSpecificsFieldNumberList) {
+ TEST(DataTypeTest, LocalSyncSupportedTypes) {
+   EXPECT_TRUE(LocalSyncSupportedTypes().Has(BOOKMARKS));
+   EXPECT_TRUE(LocalSyncSupportedTypes().Has(PREFERENCES));
+-  EXPECT_TRUE(LocalSyncSupportedTypes().Has(PASSWORDS));
++  // Enclave: passwords live in Shard's password store, history does sync.
++  EXPECT_FALSE(LocalSyncSupportedTypes().Has(PASSWORDS));
++  EXPECT_TRUE(LocalSyncSupportedTypes().Has(HISTORY));
+ 
+   EXPECT_FALSE(LocalSyncSupportedTypes().Has(ACCOUNT_SETTING));
+   EXPECT_FALSE(LocalSyncSupportedTypes().Has(APP_LIST));
+-  EXPECT_FALSE(LocalSyncSupportedTypes().Has(HISTORY));
+   EXPECT_FALSE(LocalSyncSupportedTypes().Has(THEMES_ANDROID));
+ }
+ 
+diff --git a/components/sync/base/features.cc b/components/sync/base/features.cc
+index 47806c5968e2d..949e70895c0a4 100644
+--- a/components/sync/base/features.cc
++++ b/components/sync/base/features.cc
+@@ -154,8 +154,9 @@ BASE_FEATURE(kSyncNigoriAuthenticateIV, base::FEATURE_DISABLED_BY_DEFAULT);
+ BASE_FEATURE(kSyncMigrateFromImplicitPassphrase,
+              base::FEATURE_ENABLED_BY_DEFAULT);
+ 
++// Enclave: on, so a bookmark has the same server id on every device.
+ BASE_FEATURE(kSyncMigrateLoopbackServerBookmarksToClientTagHash,
+-             base::FEATURE_DISABLED_BY_DEFAULT);
++             base::FEATURE_ENABLED_BY_DEFAULT);
+ 
+ #if !BUILDFLAG(IS_CHROMEOS)
+ BASE_FEATURE(kSyncDoNotSyncAppsAndAppSettings,
+diff --git a/components/sync/service/sync_prefs.cc b/components/sync/service/sync_prefs.cc
+index 6554502ac97f4..3c60323ac4867 100644
+--- a/components/sync/service/sync_prefs.cc
++++ b/components/sync/service/sync_prefs.cc
+@@ -216,7 +216,9 @@ void SyncPrefs::RegisterProfilePrefs(PrefRegistrySimple* registry) {
+   registry->RegisterBooleanPref(prefs::internal::kSyncManaged, false);
+   registry->RegisterIntegerPref(
+       prefs::internal::kSyncPassphrasePromptMutedProductVersion, 0);
+-  registry->RegisterBooleanPref(prefs::kEnableLocalSyncBackend, false);
++  // Enclave: sync runs on the local backend, replicated through Shard
++  // (docs/SHARD.md), on every platform.
++  registry->RegisterBooleanPref(prefs::kEnableLocalSyncBackend, true);
+   registry->RegisterFilePathPref(prefs::kLocalSyncBackendDir, base::FilePath());
+ #if BUILDFLAG(ENABLE_DICE_SUPPORT)
+   registry->RegisterBooleanPref(kAutofillPerAccountPrefMigrationDone, false);
+diff --git a/components/sync/service/sync_service_impl.cc b/components/sync/service/sync_service_impl.cc
+index 3f4d67c65a6d0..b1eaddeecefb9 100644
+--- a/components/sync/service/sync_service_impl.cc
++++ b/components/sync/service/sync_service_impl.cc
+@@ -1760,8 +1760,13 @@ void SyncServiceImpl::ConfigureDataTypeManager(
+ 
+   ConfigureContext configure_context;
+   configure_context.authenticated_gaia_id = GetAccountInfo().gaia;
++  // Enclave: local sync has no account, so nothing is "managed"; without this
++  // the types that exclude enterprise accounts (HISTORY, CONTACT_INFO) wait
++  // for a status that never comes.
+   configure_context.account_managed_status =
+-      auth_manager_->GetActiveAccountInfo().managed_status;
++      IsLocalSyncEnabled()
++          ? signin::AccountManagedStatusFinderOutcome::kConsumerNotWellKnown
++          : auth_manager_->GetActiveAccountInfo().managed_status;
+   configure_context.cache_guid = engine_->GetCacheGuid();
+   configure_context.sync_mode =
+       use_transport_only_mode ? SyncMode::kTransportOnly : SyncMode::kFull;
