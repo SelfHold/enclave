@@ -1,0 +1,97 @@
+# Linux packages (deb, rpm, archlinux) for Enclave. Built by `make package-linux` from
+# builds/linux (the files chrome needs at runtime) and builds/enclave.desktop (written by
+# `enclave.py desktop-entry`); paths are relative to the repo root.
+# No setuid chrome-sandbox: the build relies on the user-namespace sandbox, which Arch,
+# Fedora and Debian enable. Ubuntu 24.04+ restricts it through AppArmor and needs a profile
+# for /opt/selfhold/enclave/chrome. Icon and menu caches are refreshed by the package
+# managers' own hooks.
+name: enclave
+arch: amd64
+platform: linux
+version: ${PKG_VERSION}
+release: 1
+section: web
+priority: optional
+maintainer: SelfHold <https://github.com/SelfHold>
+vendor: SelfHold
+homepage: https://github.com/SelfHold/enclave
+license: GPL-3.0-only
+description: |-
+  Personal Chromium distribution: no tracking, uBlock Origin built in,
+  sync through Shard.
+
+contents:
+  - src: builds/linux
+    dst: /opt/selfhold/enclave
+    type: tree
+  - src: /opt/selfhold/enclave/chrome
+    dst: /usr/bin/enclave
+    type: symlink
+  - src: builds/enclave.desktop
+    dst: /usr/share/applications/enclave.desktop
+    file_info: { mode: 0644 }
+  - src: branding/enclave_icon.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/enclave.svg
+    file_info: { mode: 0644 }
+  - src: branding/enclave_icon_16.svg
+    dst: /usr/share/icons/hicolor/16x16/apps/enclave.svg
+    file_info: { mode: 0644 }
+  - src: src_overlay/chrome/app/theme/chromium/linux/product_logo_256.png
+    dst: /usr/share/icons/hicolor/256x256/apps/enclave.png
+    file_info: { mode: 0644 }
+  - src: LICENSE
+    dst: /usr/share/licenses/enclave/LICENSE
+    packager: archlinux
+    file_info: { mode: 0644 }
+  - src: LICENSE
+    dst: /usr/share/doc/enclave/copyright
+    packager: deb
+    file_info: { mode: 0644 }
+  - src: LICENSE
+    dst: /usr/share/licenses/enclave/LICENSE
+    type: license
+    packager: rpm
+    file_info: { mode: 0644 }
+
+# What chrome links against (ldd), named per distribution.
+overrides:
+  deb:
+    depends:
+      - "libgtk-3-0t64 | libgtk-3-0"
+      - "libnss3"
+      - "libasound2t64 | libasound2"
+      - "libcups2t64 | libcups2"
+      - "libgbm1"
+      - "libxkbcommon0"
+      - "libxcomposite1"
+      - "libxdamage1"
+      - "libxrandr2"
+      - "libatspi2.0-0t64 | libatspi2.0-0"
+    recommends:
+      - "xdg-utils"
+  rpm:
+    depends:
+      - "gtk3"
+      - "nss"
+      - "alsa-lib"
+      - "cups-libs"
+      - "mesa-libgbm"
+      - "libxkbcommon"
+      - "libXcomposite"
+      - "libXdamage"
+      - "libXrandr"
+      - "at-spi2-core"
+    recommends:
+      - "xdg-utils"
+  archlinux:
+    depends:
+      - "gtk3"
+      - "nss"
+      - "alsa-lib"
+      - "libcups"
+      - "mesa"
+      - "libxkbcommon"
+      - "libxcomposite"
+      - "libxdamage"
+      - "libxrandr"
+      - "at-spi2-core"

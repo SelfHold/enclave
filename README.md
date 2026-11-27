@@ -102,11 +102,15 @@ git clone https://github.com/SelfHold/enclave.git
 cd enclave
 ./enclave.py fetch        # Chromium at the pinned tag into chromium/src (50+ GB)
 make build-linux          # apply + build -> builds/linux/, installs the launcher and icons
+make package-linux        # apply + build -> builds/packages/ (deb, rpm, Arch; PKG=archlinux for one)
 make build-apk            # apply + build -> builds/android/*.apk
 ```
 
 `make build-linux` runs `./enclave.py desktop` at the end, which installs `enclave.desktop` and
 the icons into `~/.local/share` (or `$XDG_DATA_HOME`). The browser is `builds/linux/chrome`.
+`make package-linux` installs nothing: its packages put the browser into `/opt/selfhold/enclave`
+with a system-wide launcher. Remove the user-level launcher and icons that `make build-linux`
+installed before switching to a package, since they take precedence over it.
 
 The steps one by one:
 
@@ -125,7 +129,8 @@ make test                             # unit tests of enclave.py
 | Path | What it is |
 |---|---|
 | `enclave.py` | Build tool: fetch, vendor, apply, export, configure, build, icons, desktop |
-| `Makefile` | `build-linux`, `build-apk`, `apply`, `test`, `clean-builds` |
+| `packaging/linux/` | `nfpm.yaml` for the Linux packages |
+| `Makefile` | `build-linux`, `package-linux`, `build-apk`, `apply`, `test`, `clean-builds` |
 | `chromium_version.txt` | The pinned Chromium tag |
 | `patches/series`, `patches/enclave/` | Changes to existing Chromium files, in apply order |
 | `src_overlay/` | New files, copied into the Chromium tree at the same relative paths |

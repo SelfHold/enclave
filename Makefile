@@ -17,10 +17,11 @@ WINDOWS_FILES := $(DESKTOP_FILES) \
 	libEGL.dll libGLESv2.dll vk_swiftshader.dll vulkan-1.dll vk_swiftshader_icd.json \
 	d3dcompiler_47.dll
 
-.PHONY: help apply build-linux build-windows build-apk test clean-builds
+.PHONY: help apply stage-linux build-linux package-linux build-windows build-apk test clean-builds
 
 help:
 	@echo "make build-linux    apply + build -> $(BIN)/linux/, install launcher + icons"
+	@echo "make package-linux  apply + build -> $(BIN)/packages/ (PKG=deb rpm archlinux)"
 	@echo "make build-windows  apply + build -> $(BIN)/windows/ (not maintained)"
 	@echo "make build-apk      apply + build -> $(BIN)/android/"
 	@echo "make apply          overlay + uBlock + patches (idempotent)"
@@ -38,10 +39,29 @@ define stage
 	@echo "-> $(BIN)/$(1)/"
 endef
 
-build-linux: apply
+stage-linux: apply
 	$(ENCLAVE) build linux
 	$(call stage,linux,$(LINUX_FILES))
+
+# Installs the launcher and icons for this build into ~/.local/share. Remove them
+# (applications/enclave.desktop, icons/hicolor/*/apps/enclave.*) after switching to the
+# package: user-level files hide the packaged ones.
+build-linux: stage-linux
 	$(ENCLAVE) desktop
+
+# Linux packages from builds/linux, described in packaging/linux/nfpm.yaml.
+# PKG picks the formats (deb, rpm, archlinux; all three by default), e.g.
+#   make package-linux PKG=archlinux
+# The version is the Chromium base version. nfpm runs through `go run` unless installed.
+PKG ?= deb rpm archlinux
+NFPM ?= $(or $(shell command -v nfpm 2>/dev/null),go run github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.49.0)
+
+package-linux: stage-linux
+	$(ENCLAVE) desktop-entry --binary /opt/selfhold/enclave/chrome > $(BIN)/enclave.desktop
+	mkdir -p $(BIN)/packages
+	@for p in $(PKG); do \
+		PKG_VERSION=$$(cat chromium_version.txt) $(NFPM) package -f packaging/linux/nfpm.yaml -p $$p -t $(BIN)/packages/ || exit 1; \
+	done
 
 build-windows: apply
 	$(ENCLAVE) build windows

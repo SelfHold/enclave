@@ -474,6 +474,9 @@ def main():
     desktop = commands.add_parser("desktop", help="install the Linux launcher and icons")
     desktop.add_argument("--binary", default=ROOT / "builds" / "linux" / "chrome")
     desktop.set_defaults(func=cmd_desktop)
+    entry = commands.add_parser("desktop-entry", help="print the launcher for a binary path")
+    entry.add_argument("--binary", required=True)
+    entry.set_defaults(func=lambda args: sys.stdout.write(desktop_entry(args.binary)))
     for name, func in (("configure", cmd_configure), ("build", cmd_build)):
         command = commands.add_parser(name)
         command.add_argument("platform", choices=PLATFORMS)
